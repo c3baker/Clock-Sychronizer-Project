@@ -25,16 +25,10 @@
 // Format is used by a number of functions, so made as a file global
 static struct v4l2_format fmt;
 
-struct buffer 
-{
-        void   *start;
-        size_t  length;
-};
-
 static char            *dev_name;
 static enum io_method   io = IO_METHOD_MMAP;
 static int              fd = -1;
-struct buffer          *buffers;
+struct v4l2_mm_frame_buffer  *buffers;
 static unsigned int     n_buffers;
 static int              out_buf;
 static int              force_format=1;
@@ -269,12 +263,44 @@ void v4l2_process_image(const void *p, int size)
     fflush(stdout);
 }
 
+int v4l2_requeue_frame_capture_buffer(struct v4l2_mm_frame_buffer* frame_buffer)
+{
+    int i = 0;
+    struct v4l2_buffer buf;
+    assert(frame_buffer != NULL);
 
-int v4l2_read_frame(void)
+    CLEAR(buf);
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_MMAP;
+
+    for(i = 0; i < n_buffers; i++)
+    {
+        if(buffers[i].start == frame_buffer->start)
+            break;
+    }
+
+    if(i == n_buffers)
+    {
+        return -1;
+    }
+
+    buf.index = i;
+
+    if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
+    {
+        print_errno("VIDIOC_QBUF");
+        return -1;
+    }
+
+   return 0;
+}
+
+int v4l2_read_frame(struct v4l2_mm_frame_buffer** frame_buffer)
 {
     struct v4l2_buffer buf;
     unsigned int i;
 
+     assert(frame_buffer != NULL);
      CLEAR(buf);
      buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
      buf.memory = V4L2_MEMORY_MMAP;
@@ -298,11 +324,13 @@ int v4l2_read_frame(void)
      }
 
      assert(buf.index < n_buffers);
-	 if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
+/**	 if (-1 == xioctl(fd, VIDIOC_QBUF, &buf))
 	 {
 	    	print_errno("VIDIOC_QBUF");
 		    return -1;
-	 } 
+	 }**/
+
+     *frame_buffer = buffers[buf.index];
 
     return 0;
 }

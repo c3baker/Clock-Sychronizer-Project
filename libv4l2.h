@@ -33,6 +33,12 @@
 
 #include <time.h>
 
+struct v4l2_mm_frame_buffer
+{
+        void   *start;
+        size_t  length;
+};
+
 enum io_method
 {
 	IO_METHOD_READ,
@@ -41,12 +47,12 @@ enum io_method
 };
 
 void v4l2_process_image(const void *p, int size);
-int v4l2_read_frame(void);
+int v4l2_read_frame(struct v4l2_mm_frame_buffer** frame_buffer);
 int v4l2_stop_capturing(void);
 int v4l2_start_capturing(void);
 int v4l2_uninit_device(void);
 int v4l2_init_device(enum io_method init_io_method);
 void v4l2_close_device(void);
 void v4l2_open_device(void);
-
+int v4l2_requeue_frame_capture_buffer(struct v4l2_mm_frame_buffer* frame_buffer);
 
